@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gold Price Calculator</title>
+<style>
+:root {
+  --bg: #f6f4ef;
+  --surface: #ffffff;
+  --fg: #1d1b16;
+  --muted: #6d675a;
+  --line: #e1dccf;
+  --accent: #a67c00;
+  --accent-soft: #f3e8c4;
+  --font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-num: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15130e;
+    --surface: #201d15;
+    --fg: #f1ecdf;
+    --muted: #a39b87;
+    --line: #353022;
+    --accent: #e0b43a;
+    --accent-soft: #3a3014;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  padding: 32px 16px;
+}
+main { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1 { font-size: 1.5rem; margin: 0; }
+.sub { color: var(--muted); margin: 4px 0 0; font-size: 0.9rem; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.field { display: flex; flex-direction: column; gap: 6px; }
+input {
+  font-family: var(--font-num);
+  font-size: 1.5rem;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.row2 { display: flex; gap: 12px; flex-wrap: wrap; }
+.row2 .field { flex: 1 1 140px; min-width: 0; }
+input.small { font-size: 1rem; }
+.result { background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 10px; padding: 18px; }
+.result .big { font-family: var(--font-num); font-size: 2.4rem; font-weight: 600; overflow-wrap: anywhere; }
+.steps { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.steps li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.steps li:last-child { border-bottom: 0; }
+.steps .k { color: var(--muted); font-size: 0.9rem; }
+.steps .v { font-family: var(--font-num); overflow-wrap: anywhere; }
+.err { color: #b3261e; font-size: 0.9rem; min-height: 1.3em; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Gold Price Calculator</h1>
+    <p class="sub">Enter a gold price in decimals. The result updates as you type.</p>
+  </header>
+
+  <section class="panel">
+    <div class="field">
+      <label for="price">Gold price</label>
+      <input id="price" type="text" inputmode="decimal" autocomplete="off" value="3880.18">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="add">Add after square root</label>
+        <input id="add" class="small" type="text" inputmode="decimal" autocomplete="off" value="0.105">
+      </div>
+      <div class="field">
+        <label for="dp">Decimal places</label>
+        <input id="dp" class="small" type="text" inputmode="numeric" autocomplete="off" value="4">
+      </div>
+    </div>
+    <div class="err" id="err" role="status"></div>
+  </section>
+
+  <section class="result" aria-live="polite">
+    <label>Final answer</label>
+    <div class="big" id="final">-</div>
+  </section>
+
+  <section class="panel">
+    <label>Working</label>
+    <ol class="steps">
+      <li><span class="k">1. Square root of price</span><span class="v" id="s1">-</span></li>
+      <li><span class="k">2. Add 0.105</span><span class="v" id="s2">-</span></li>
+      <li><span class="k">3. Square of that</span><span class="v" id="s3">-</span></li>
+      <li><span class="k">4. Minus the first price</span><span class="v" id="s4">-</span></li>
+    </ol>
+  </section>
+</main>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function num(s) { return parseFloat(String(s).replace(/,/g, "").trim()); }
+
+  function calc() {
+    var x = num($("price").value);
+    var a = num($("add").value);
+    var dp = parseInt($("dp").value, 10);
+    if (isNaN(dp) || dp < 0 || dp > 10) dp = 4;
+
+    var ids = ["final", "s1", "s2", "s3", "s4"];
+    if (isNaN(x) || isNaN(a) || x < 0) {
+      $("err").textContent = $("price").value.trim() === "" ? "" : "Enter a valid number that is zero or more.";
+      ids.forEach(function (i) { $(i).textContent = "-"; });
+      return;
+    }
+    $("err").textContent = "";
+
+    var r = Math.sqrt(x);      // step 1: square root
+    var plus = r + a;          // step 2: add 0.105
+    var sq = plus * plus;      // step 3: square
+    var out = sq - x;          // step 4: minus the first number
+
+    $("s2").parentNode.querySelector(".k").textContent = "2. Add " + a;
+    $("s1").textContent = r.toFixed(dp + 2);
+    $("s2").textContent = plus.toFixed(dp + 2);
+    $("s3").textContent = sq.toFixed(dp + 2);
+    $("s4").textContent = out.toFixed(dp + 2);
+    $("final").textContent = out.toFixed(dp);
+  }
+
+  ["price", "add", "dp"].forEach(function (id) {
+    $(id).addEventListener("input", calc);
+  });
+  calc();
+})();
+</script>
+</body>
+</html>
